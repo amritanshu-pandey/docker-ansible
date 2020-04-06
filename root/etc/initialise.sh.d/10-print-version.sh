@@ -1,4 +1,4 @@
 #!/bin/bash
 
-python --version
+python3 --version
 ansible --version
