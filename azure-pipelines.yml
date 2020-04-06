@@ -1,0 +1,126 @@
+# Docker
+# Build a Docker image 
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+
+trigger:
+  branches:
+    include:
+      - '*'
+  tags:
+    include:
+      - '*'
+
+schedules:
+- cron: "0 0 * * *"
+  displayName: build master branch every midnight (docker tag `latest`)
+  branches:
+    include:
+    - master
+  always: true
+
+resources:
+- repo: self
+
+variables:
+  tag: '$(Build.BuildId)'
+
+stages:
+- stage: Build
+  displayName: Build image
+
+  jobs:  
+  - job: Build
+    displayName: Build
+    dependsOn: []
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+      clean: true
+    - script: docker build -t amritanshu16/ansible:ci .
+      displayName: build docker image
+    - script: docker run -t --rm amritanshu16/ansible:ci
+      displayName: Test docker image
+    - script: |
+        docker image save amritanshu16/ansible:ci -o docker-image.tar.gz
+      displayName: export image tarball
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathtoPublish: './docker-image.tar.gz' 
+        artifactName: 'drop' 
+        publishLocation: 'Container'
+      displayName: publish image tarball for the next stage
+
+  - job: linting
+    displayName: Linting
+    dependsOn: []
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - script: |
+        sudo apt install shellcheck -y
+        find . -regex '.*\.sh$' | xargs -L 1 shellcheck
+      displayName: lint shellscripts
+
+- stage: deploy
+  displayName: Deploy image
+  jobs:
+  - job: deploy_to_docker_hub
+    dependsOn: []
+    displayName: Deploy image to dockerhub
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: DownloadBuildArtifacts@0
+      inputs:
+        buildType: 'current'
+        artifactName: 'drop'
+        downloadPath: ./
+      displayName: download artefacts from previous stage
+    - script: |
+        docker images
+        docker load < drop/docker-image.tar.gz
+        docker images
+      displayName: Load docker image prepared in last step into docker daemon
+    - script: |
+        docker login -u $(DOCKER_REPOSITORY_USER) -p $(DOCKER_REPOSITORY_SECRET)
+        docker tag amritanshu16/ansible:{ci,latest}
+        docker push amritanshu16/ansibe:latest
+      displayName: Publish latest tag
+      condition: eq(variables['build.sourceBranch'], 'refs/heads/master')
+    - script: |
+        docker login -u $(DOCKER_REPOSITORY_USER) -p $(DOCKER_REPOSITORY_SECRET)
+        docker tag amritanshu16/ansible:{ci,$(build.sourceBranchName)}
+        docker push amritanshu16/ansible:$(build.sourceBranchName)
+      displayName: Publish git tag
+      condition: startsWith(variables['build.sourceBranch'], 'refs/tags')
+
+  - job: deploy_to_github_packages
+    dependsOn: []
+    displayName: Deploy image to github packages
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: DownloadBuildArtifacts@0
+      inputs:
+        buildType: 'current'
+        artifactName: 'drop'
+        downloadPath: ./
+      displayName: download artefacts from previous stage
+    - script: |
+        docker images
+        docker load < drop/docker-image.tar.gz
+        docker images
+      displayName: Load docker image prepared in last step into docker daemon
+    - script: |
+        docker login docker.pkg.github.com -u $(GITHUB_PACKAGES_USER) -p $(GITHUB_PACKAGES_SECRET)
+        docker tag amritanshu16/docker-base:ci $(GITHUB_DOCKER_REPOSITORY)/docker-ansible/ansible:latest
+        docker push $(GITHUB_DOCKER_REPOSITORY)/docker-ansible/ansible:latest
+      displayName: Publish latest tag
+      condition: eq(variables['build.sourceBranch'], 'refs/heads/master')
+    - script: |
+        docker login docker.pkg.github.com -u $(GITHUB_PACKAGES_USER) -p $(GITHUB_PACKAGES_SECRET)
+        docker tag amritanshu16/docker-base:ci $(GITHUB_DOCKER_REPOSITORY)/docker-ansible/ansible:$(build.sourceBranchName)
+        docker push $(GITHUB_DOCKER_REPOSITORY)/docker-base/docker-base:$(build.sourceBranchName)
+      displayName: Publish git tag
+      condition: startsWith(variables['build.sourceBranch'], 'refs/tags')
