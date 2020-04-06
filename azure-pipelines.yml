@@ -22,7 +22,9 @@ resources:
 - repo: self
 
 variables:
-  tag: '$(Build.BuildId)'
+  - name: tag
+    value: '$(Build.BuildId)'
+  - group: integrations
 
 stages:
 - stage: Build
@@ -85,7 +87,7 @@ stages:
     - script: |
         docker login -u $(DOCKER_REPOSITORY_USER) -p $(DOCKER_REPOSITORY_SECRET)
         docker tag amritanshu16/ansible:{ci,latest}
-        docker push amritanshu16/ansibe:latest
+        docker push amritanshu16/ansible:latest
       displayName: Publish latest tag
       condition: eq(variables['build.sourceBranch'], 'refs/heads/master')
     - script: |
@@ -114,13 +116,13 @@ stages:
       displayName: Load docker image prepared in last step into docker daemon
     - script: |
         docker login docker.pkg.github.com -u $(GITHUB_PACKAGES_USER) -p $(GITHUB_PACKAGES_SECRET)
-        docker tag amritanshu16/docker-base:ci $(GITHUB_DOCKER_REPOSITORY)/docker-ansible/ansible:latest
+        docker tag amritanshu16/ansible:ci $(GITHUB_DOCKER_REPOSITORY)/docker-ansible/ansible:latest
         docker push $(GITHUB_DOCKER_REPOSITORY)/docker-ansible/ansible:latest
       displayName: Publish latest tag
       condition: eq(variables['build.sourceBranch'], 'refs/heads/master')
     - script: |
         docker login docker.pkg.github.com -u $(GITHUB_PACKAGES_USER) -p $(GITHUB_PACKAGES_SECRET)
-        docker tag amritanshu16/docker-base:ci $(GITHUB_DOCKER_REPOSITORY)/docker-ansible/ansible:$(build.sourceBranchName)
-        docker push $(GITHUB_DOCKER_REPOSITORY)/docker-base/docker-base:$(build.sourceBranchName)
+        docker tag amritanshu16/ansible:ci $(GITHUB_DOCKER_REPOSITORY)/docker-ansible/ansible:$(build.sourceBranchName)
+        docker push $(GITHUB_DOCKER_REPOSITORY)/docker-ansible/ansible:$(build.sourceBranchName)
       displayName: Publish git tag
       condition: startsWith(variables['build.sourceBranch'], 'refs/tags')
