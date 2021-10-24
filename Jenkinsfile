@@ -22,14 +22,14 @@ pipeline {
                     sh "docker push registry.xps.lan/amritanshu16/ansible:ci"
                 }
             }
-        },
+        }
         stage('Test') {
             steps {
                 withVault([configuration: configuration, vaultSecrets: secrets]) {
                     sh "docker run- it --rm registry.xps.lan/amritanshu16/ansible:ci"
                 }
             }
-        },
+        }
         stage('Publish') {
             steps {
                 withVault([configuration: configuration, vaultSecrets: secrets]) {
