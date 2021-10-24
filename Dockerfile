@@ -1,4 +1,4 @@
-FROM amritanshu16/docker-base:latest
+FROM dockerproxy.xps.lan/amritanshu16/docker-base:latest
 LABEL maintainer='Amritanshu Pandey <email@amritanshu.in>'
 
 RUN apt update -y \
