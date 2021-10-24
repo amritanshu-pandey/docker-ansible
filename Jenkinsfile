@@ -26,7 +26,7 @@ pipeline {
         stage('Test') {
             steps {
                 withVault([configuration: configuration, vaultSecrets: secrets]) {
-                    sh "docker run- it --rm registry.xps.lan/amritanshu16/ansible:ci"
+                    sh "docker run -it --rm registry.xps.lan/amritanshu16/ansible:ci"
                 }
             }
         }
