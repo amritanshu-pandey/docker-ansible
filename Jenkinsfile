@@ -1,9 +1,8 @@
 def secrets = [
-  [path: 'cisecrets/nginx.xps.lan', engineVersion: 2, secretValues: [
-    [envVar: 'SSL_CERTIFICATE', vaultKey: 'SSL_CERTIFICATE'],
-    [envVar: 'SSL_CERTIFICATE_KEY', vaultKey: 'SSL_CERTIFICATE_KEY']]],
   [path: 'cisecrets/jenkins.xps.lan', engineVersion: 2, secretValues: [
-    [envVar: 'SSH_PRIVATE_KEY', vaultKey: 'ssh_private_key']]]
+    [envVar: 'docker_user', vaultKey: 'docker_user'],
+    [envVar: 'docker_password', vaultKey: 'docker_password'],
+    ]]
 ]
 def configuration = [
     vaultUrl: 'https://vault.xps.lan',
@@ -18,6 +17,7 @@ pipeline {
         stage('Test') {
             steps {
                 withVault([configuration: configuration, vaultSecrets: secrets]) {
+                    sh "docker login registry.xps.lan -u ${env.docker_user} -p ${env.docker_password}"
                     sh "docker build -t registry.xps.lan/amritanshu16/ansible:ci ."
                     sh "docker push registry.xps.lan/amritanshu16/ansible:ci"
                 }
