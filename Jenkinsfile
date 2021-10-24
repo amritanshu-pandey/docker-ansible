@@ -13,7 +13,7 @@ def configuration = [
 ]
 
 pipeline {
-    agent { node }
+    agent { label 'jenkinsrunner1.xps.lan' }
     stages {
         stage('Test') {
             steps {
